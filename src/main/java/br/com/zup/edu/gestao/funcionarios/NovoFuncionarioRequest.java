@@ -30,15 +30,22 @@ public class NovoFuncionarioRequest {
         this.salario = salario;
     }
 
+    public NovoFuncionarioRequest(){
+
+    }
+
     public String getNome() {
         return nome;
     }
+
     public String getCpf() {
         return cpf;
     }
+
     public Cargo getCargo() {
         return cargo;
     }
+
     public BigDecimal getSalario() {
         return salario;
     }
