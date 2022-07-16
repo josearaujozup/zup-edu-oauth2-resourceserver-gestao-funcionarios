@@ -4,10 +4,12 @@ import base.SpringBootIntegrationTest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.math.BigDecimal;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.jwt;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.redirectedUrlPattern;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -28,7 +30,9 @@ class NovoFuncionarioControllerTest extends SpringBootIntegrationTest {
                 "785.547.810-82", Cargo.GERENTE, new BigDecimal("10981.99"));
 
         // ação
-        mockMvc.perform(POST("/api/funcionarios", novoFuncionario))
+        mockMvc.perform(POST("/api/funcionarios", novoFuncionario)
+                        .with(jwt()
+                                .authorities(new SimpleGrantedAuthority("SCOPE_funcionarios:write"))))
                 .andExpect(status().isCreated())
                 .andExpect(redirectedUrlPattern("**/api/funcionarios/*"))
         ;
@@ -43,7 +47,9 @@ class NovoFuncionarioControllerTest extends SpringBootIntegrationTest {
         NovoFuncionarioRequest invalido = new NovoFuncionarioRequest("", "", null, null);
 
         // ação
-        mockMvc.perform(POST("/api/funcionarios", invalido))
+        mockMvc.perform(POST("/api/funcionarios", invalido)
+                        .with(jwt()
+                                .authorities(new SimpleGrantedAuthority("SCOPE_funcionarios:write"))))
                 .andExpect(status().isBadRequest())
         ;
 
@@ -62,7 +68,9 @@ class NovoFuncionarioControllerTest extends SpringBootIntegrationTest {
                             existente.getCpf(), Cargo.DESENVOLVEDOR, new BigDecimal("5432.99"));
 
         // ação
-        mockMvc.perform(POST("/api/funcionarios", novoFuncionario))
+        mockMvc.perform(POST("/api/funcionarios", novoFuncionario)
+                        .with(jwt()
+                                .authorities(new SimpleGrantedAuthority("SCOPE_funcionarios:write"))))
                 .andExpect(status().isUnprocessableEntity())
                 .andExpect(status().reason("funcionário com CPF já existente"))
         ;
@@ -70,4 +78,30 @@ class NovoFuncionarioControllerTest extends SpringBootIntegrationTest {
         // validação
         assertEquals(1, repository.count(), "total de funcionarios");
     }
+
+    @Test
+    public void naoDeveCadastrarNovoFuncionario_quandoTokenNaoEnviado() throws Exception {
+        // cenário
+        NovoFuncionarioRequest novoFuncionario = new NovoFuncionarioRequest("Alberto",
+                "785.547.810-82", Cargo.GERENTE, new BigDecimal("10981.99"));
+
+        // ação
+        mockMvc.perform(POST("/api/funcionarios", novoFuncionario))
+                .andExpect(status().isUnauthorized())
+        ;
+    }
+
+    @Test
+    public void naoDeveCadastrarNovoFuncionario_quandoTokenNaoPossuiEscopoApropriado() throws Exception {
+        // cenário
+        NovoFuncionarioRequest novoFuncionario = new NovoFuncionarioRequest("Alberto",
+                "785.547.810-82", Cargo.GERENTE, new BigDecimal("10981.99"));
+
+        // ação
+        mockMvc.perform(POST("/api/funcionarios", novoFuncionario)
+                        .with(jwt()))
+                .andExpect(status().isForbidden())
+        ;
+    }
+
 }
